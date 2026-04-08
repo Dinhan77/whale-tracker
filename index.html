@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🐋 Whale Wallet Tracker</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #06080f; color: #fff; min-height: 100vh; }
+
+    .header { background: linear-gradient(135deg, #0a1020, #0a0f20, #0a1020); border-bottom: 1px solid #1a2235; padding: 20px; text-align: center; }
+    .header h1 { font-size: 28px; background: linear-gradient(90deg, #00b0ff, #7c4dff, #00e5ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 6px; }
+    .header p { color: #444; font-size: 13px; }
+    .chain-badges { display: flex; justify-content: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .chain-badge { padding: 3px 10px; border-radius: 10px; font-size: 11px; border: 1px solid; }
+    .b-eth { border-color: #627eea; color: #627eea; background: rgba(98,126,234,0.1); }
+    .b-bnb { border-color: #f0b90b; color: #f0b90b; background: rgba(240,185,11,0.1); }
+    .b-sol { border-color: #9945ff; color: #9945ff; background: rgba(153,69,255,0.1); }
+    .b-arb { border-color: #12aaff; color: #12aaff; background: rgba(18,170,255,0.1); }
+    .b-base { border-color: #0052ff; color: #0052ff; background: rgba(0,82,255,0.1); }
+
+    .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+
+    .card { background: #0d1120; border: 1px solid #1a2235; border-radius: 16px; padding: 20px; margin-bottom: 14px; }
+    .card h2 { font-size: 14px; color: #00b0ff; margin-bottom: 16px; }
+
+    input[type=text], input[type=number], select {
+      width: 100%; padding: 10px 14px;
+      background: #06080f; border: 1px solid #1a2235;
+      border-radius: 8px; color: #fff; font-size: 13px; outline: none;
+    }
+    input:focus, select:focus { border-color: #00b0ff; }
+    select option { background: #0d1120; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+    .form-group { margin-bottom: 12px; }
+    label { display: block; font-size: 11px; color: #444; margin-bottom: 4px; }
+
+    .chain-select { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chain-btn { padding: 7px 14px; border-radius: 20px; border: 1px solid #1a2235; background: #06080f; color: #555; cursor: pointer; font-size: 12px; transition: all 0.2s; }
+    .chain-btn.active { border-color: #00b0ff; color: #00b0ff; background: rgba(0,176,255,0.08); }
+
+    .btn-analyze { width: 100%; padding: 14px; background: linear-gradient(90deg, #00b0ff, #7c4dff); border: none; border-radius: 12px; color: #fff; font-size: 15px; font-weight: bold; cursor: pointer; margin-bottom: 16px; transition: opacity 0.2s; }
+    .btn-analyze:hover { opacity: 0.88; }
+    .btn-analyze:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-fetch { padding: 10px 16px; background: #1a2235; border: 1px solid #2a3355; border-radius: 8px; color: #aaa; font-size: 13px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+    .btn-fetch:hover { border-color: #00b0ff; color: #00b0ff; }
+
+    .loading { display: none; text-align: center; padding: 24px; color: #555; }
+    .spinner { width: 44px; height: 44px; border: 3px solid #1a2235; border-top-color: #00b0ff; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 14px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-msg { display: none; background: rgba(255,60,60,0.08); border: 1px solid #ff3c3c; border-radius: 10px; padding: 12px; color: #ff6b6b; font-size: 13px; margin-bottom: 12px; }
+
+    /* Result */
+    .result-section { display: none; }
+
+    .result-hero { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+    .hero-box { background: #06080f; border: 2px solid #1a2235; border-radius: 14px; padding: 18px; text-align: center; }
+    .hero-icon { font-size: 36px; margin-bottom: 8px; }
+    .hero-label { font-size: 11px; color: #444; margin-bottom: 4px; }
+    .hero-value { font-size: 18px; font-weight: bold; }
+    .hero-sub { font-size: 11px; color: #555; margin-top: 4px; }
+
+    /* Alert Banner */
+    .alert-banner { padding: 14px 18px; border-radius: 12px; margin-bottom: 14px; font-size: 14px; font-weight: bold; text-align: center; }
+    .alert-0 { background: rgba(0,230,118,0.08); border: 1px solid #00e676; color: #00e676; }
+    .alert-1 { background: rgba(255,214,0,0.08); border: 1px solid #ffd600; color: #ffd600; }
+    .alert-2 { background: rgba(255,68,68,0.1); border: 2px solid #ff4444; color: #ff6b6b; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
+
+    /* Metrics */
+    .metric-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #1a2235; }
+    .metric-row:last-child { border-bottom: none; }
+    .metric-icon { font-size: 20px; width: 32px; text-align: center; }
+    .metric-info { flex: 1; }
+    .metric-name { font-size: 13px; color: #aaa; }
+    .metric-detail { font-size: 11px; color: #555; margin-top: 2px; }
+    .metric-value { font-size: 15px; font-weight: bold; }
+
+    /* Flow Chart */
+    .flow-bar { height: 12px; background: #1a2235; border-radius: 6px; overflow: hidden; margin-top: 6px; position: relative; }
+    .flow-inflow  { position: absolute; right: 0; height: 100%; background: #ff4444; border-radius: 6px; }
+    .flow-outflow { position: absolute; left: 0; height: 100%; background: #00e676; border-radius: 6px; }
+
+    /* Token Info */
+    .token-header { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+    .token-logo { width: 48px; height: 48px; border-radius: 50%; background: #1a2235; }
+    .token-name { font-size: 20px; font-weight: bold; }
+    .token-symbol { font-size: 13px; color: #555; }
+    .token-price { font-size: 26px; font-weight: bold; color: #00b0ff; margin-left: auto; }
+
+    .price-change { font-size: 13px; font-weight: bold; padding: 3px 10px; border-radius: 10px; }
+    .price-up   { background: rgba(0,230,118,0.15); color: #00e676; }
+    .price-down { background: rgba(255,68,68,0.15); color: #ff6b6b; }
+
+    /* Stats Grid */
+    .stats-mini { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+    .stat-mini { background: #06080f; border: 1px solid #1a2235; border-radius: 10px; padding: 12px; text-align: center; }
+    .stat-mini-label { font-size: 10px; color: #444; margin-bottom: 4px; }
+    .stat-mini-val { font-size: 14px; font-weight: bold; }
+
+    /* Recent Txs */
+    .tx-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #1a2235; }
+    .tx-item:last-child { border-bottom: none; }
+    .tx-left { display: flex; gap: 10px; align-items: center; }
+    .tx-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .tx-buy  { background: #00e676; }
+    .tx-sell { background: #ff4444; }
+    .tx-addr { font-size: 12px; color: #aaa; font-family: monospace; }
+    .tx-time { font-size: 11px; color: #555; }
+    .tx-amount { font-size: 13px; font-weight: bold; }
+
+    /* Analysis */
+    .reason-item { padding: 10px 0; border-bottom: 1px solid #1a2235; font-size: 13px; color: #aaa; display: flex; gap: 10px; line-height: 1.6; }
+    .reason-item:last-child { border-bottom: none; }
+
+    .section-title { font-size: 11px; color: #333; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+    .divider { border: none; border-top: 1px solid #1a2235; margin: 14px 0; }
+
+    .live-dot { width: 8px; height: 8px; background: #ff4444; border-radius: 50%; display: inline-block; animation: pulse 1s infinite; margin-right: 6px; }
+    .disclaimer { text-align: center; color: #222; font-size: 11px; padding: 20px 0 30px; }
+
+    /* Whale List */
+    .whale-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: #06080f; border: 1px solid #1a2235; border-radius: 8px; margin-bottom: 8px; }
+    .whale-rank { font-size: 12px; color: #555; width: 24px; }
+    .whale-addr { font-size: 12px; color: #aaa; font-family: monospace; flex: 1; margin: 0 12px; }
+    .whale-pct { font-size: 13px; font-weight: bold; color: #00b0ff; }
+    .whale-change { font-size: 11px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🐋 Whale Wallet Tracker</h1>
+  <p>Theo dõi cá voi · Phân tích on-chain · Dự đoán giá · Powered by OpenGradient AI</p>
+  <div class="chain-badges">
+    <span class="chain-badge b-eth">ETH</span>
+    <span class="chain-badge b-bnb">BNB</span>
+    <span class="chain-badge b-sol">SOL</span>
+    <span class="chain-badge b-arb">ARB</span>
+    <span class="chain-badge b-base">BASE</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Input Form -->
+  <div class="card">
+    <h2>🔍 Theo dõi Token</h2>
+    <div style="display:flex;gap:10px;margin-bottom:12px">
+      <input type="text" id="tokenId" placeholder="Nhập tên token (vd: bitcoin, ethereum, solana, sui...)">
+      <button class="btn-fetch" onclick="fetchTokenData()">Tải dữ liệu</button>
+    </div>
+    <div style="margin-bottom:12px">
+      <label>⛓️ Chain</label>
+      <div class="chain-select" id="chainSelect">
+        <div class="chain-btn b-eth active" onclick="selectChain(this,'ETH')">ETH</div>
+        <div class="chain-btn b-bnb" onclick="selectChain(this,'BNB')">BNB</div>
+        <div class="chain-btn b-sol" onclick="selectChain(this,'SOL')">SOL</div>
+        <div class="chain-btn b-arb" onclick="selectChain(this,'ARB')">ARB</div>
+        <div class="chain-btn b-base" onclick="selectChain(this,'BASE')">BASE</div>
+      </div>
+    </div>
+    <div class="section-title" style="margin-bottom:8px">Thông số on-chain (nhập thủ công hoặc từ Etherscan/Nansen)</div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>💰 Giá trị giao dịch whale (USD)</label>
+        <input type="number" id="txAmount" placeholder="vd: 5000000" value="5000000">
+      </div>
+      <div class="form-group">
+        <label>📊 Số giao dịch whale 24h</label>
+        <input type="number" id="txCount" placeholder="vd: 12" value="12">
+      </div>
+      <div class="form-group">
+        <label>📈 Tỷ lệ Mua/Bán whale</label>
+        <input type="number" id="buySell" placeholder="vd: 2.5 (>1=mua nhiều hơn)" step="0.1" value="2.5">
+      </div>
+      <div class="form-group">
+        <label>🏦 Exchange Inflow (USD)</label>
+        <input type="number" id="inflow" placeholder="vd: 1000000" value="1000000">
+      </div>
+      <div class="form-group">
+        <label>🏦 Exchange Outflow (USD)</label>
+        <input type="number" id="outflow" placeholder="vd: 3000000" value="3000000">
+      </div>
+      <div class="form-group">
+        <label>🔑 Tuổi ví whale chính (ngày)</label>
+        <input type="number" id="walletAge" placeholder="vd: 365" value="365">
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="form-group">
+        <label>% Thay đổi giá 24h</label>
+        <input type="number" id="priceChange" placeholder="vd: 5.5" step="0.1" value="5.5">
+      </div>
+      <div class="form-group">
+        <label>Hạng Market Cap</label>
+        <input type="number" id="mcapRank" placeholder="vd: 10" value="10">
+      </div>
+      <div class="form-group">
+        <label>% Top 10 ví nắm giữ</label>
+        <input type="number" id="concentration" placeholder="vd: 35" step="0.1" value="35">
+      </div>
+    </div>
+  </div>
+
+  <div class="error-msg" id="errorMsg"></div>
+  <button class="btn-analyze" onclick="runAnalysis()">🐋 Phân tích Whale Activity</button>
+  <div class="loading" id="loading"><div class="spinner"></div><p>Đang phân tích với OpenGradient AI...</p></div>
+
+  <!-- Results -->
+  <div class="result-section" id="resultSection">
+
+    <!-- Token Info (if loaded) -->
+    <div class="card" id="tokenCard" style="display:none">
+      <div class="token-header">
+        <img class="token-logo" id="tokenLogo" src="" alt="">
+        <div>
+          <div class="token-name" id="tokenName">-</div>
+          <div class="token-symbol" id="tokenSym">-</div>
+        </div>
+        <div style="text-align:right">
+          <div class="token-price" id="tokenPrice">-</div>
+          <span class="price-change" id="priceChangeBadge">-</span>
+        </div>
+      </div>
+      <div class="stats-mini">
+        <div class="stat-mini"><div class="stat-mini-label">Market Cap</div><div class="stat-mini-val" id="sMcap">-</div></div>
+        <div class="stat-mini"><div class="stat-mini-label">Volume 24h</div><div class="stat-mini-val" id="sVol">-</div></div>
+        <div class="stat-mini"><div class="stat-mini-label">Hạng #</div><div class="stat-mini-val" id="sRank">-</div></div>
+      </div>
+    </div>
+
+    <!-- Alert Banner -->
+    <div class="alert-banner" id="alertBanner"></div>
+
+    <!-- Hero Results -->
+    <div class="result-hero">
+      <div class="hero-box" id="signalBox">
+        <div class="hero-icon" id="signalIcon">-</div>
+        <div class="hero-label">Whale Signal</div>
+        <div class="hero-value" id="signalVal">-</div>
+        <div class="hero-sub" id="signalSub">-</div>
+      </div>
+      <div class="hero-box" id="impactBox">
+        <div class="hero-icon" id="impactIcon">-</div>
+        <div class="hero-label">Price Impact</div>
+        <div class="hero-value" id="impactVal">-</div>
+        <div class="hero-sub" id="impactSub">-</div>
+      </div>
+      <div class="hero-box" id="flowBox">
+        <div class="hero-icon" id="flowIcon">-</div>
+        <div class="hero-label">Exchange Flow</div>
+        <div class="hero-value" id="flowVal">-</div>
+        <div class="hero-sub" id="flowSub">-</div>
+      </div>
+      <div class="hero-box" id="alertBox2">
+        <div class="hero-icon" id="alertIcon2">-</div>
+        <div class="hero-label">Alert Level</div>
+        <div class="hero-value" id="alertVal">-</div>
+        <div class="hero-sub" id="alertSub">-</div>
+      </div>
+    </div>
+
+    <!-- Metrics Detail -->
+    <div class="card">
+      <h2>📊 Phân tích chi tiết</h2>
+      <div id="metricsDetail"></div>
+      <div class="divider"></div>
+      <div class="section-title">Dòng tiền Exchange</div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:#555;margin-bottom:4px">
+        <span id="flowOutLabel">Outflow: $0</span>
+        <span id="flowInLabel">Inflow: $0</span>
+      </div>
+      <div class="flow-bar" id="flowBar"></div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-top:4px">
+        <span style="color:#00e676">🟢 Outflow = Whale rút về ví (tích lũy)</span>
+        <span style="color:#ff4444">🔴 Inflow = Whale nạp vào sàn (chuẩn bị bán)</span>
+      </div>
+    </div>
+
+    <!-- Simulated Whale List -->
+    <div class="card">
+      <h2>🐋 Top Whale Wallets <span class="live-dot"></span></h2>
+      <div id="whaleList"></div>
+    </div>
+
+    <!-- Recent Transactions -->
+    <div class="card">
+      <h2>⚡ Giao dịch Whale gần nhất</h2>
+      <div id="recentTxs"></div>
+    </div>
+
+    <!-- Analysis -->
+    <div class="card">
+      <h2>🧠 Phân tích & Khuyến nghị</h2>
+      <div id="analysisList"></div>
+    </div>
+
+  </div>
+
+  <p class="disclaimer">🐋 Whale Wallet Tracker · OpenGradient AI · Dữ liệu mang tính tham khảo · Không phải lời khuyên đầu tư</p>
+</div>
+
+<script>
+  const MODEL_CID = "9-MNEFPWFKWnNn_nfuHLFlkR0V-iF1f0bSJXbrn71U";
+  let selectedChain = 'ETH';
+  let tokenData = null;
+
+  function selectChain(el, chain) {
+    selectedChain = chain;
+    document.querySelectorAll('.chain-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  function formatUSD(n) {
+    if (n >= 1e9) return '$' + (n/1e9).toFixed(2) + 'B';
+    if (n >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+    if (n >= 1e3) return '$' + (n/1e3).toFixed(0) + 'K';
+    return '$' + n.toFixed(2);
+  }
+
+  async function fetchTokenData() {
+    const id = document.getElementById('tokenId').value.trim().toLowerCase().replace(/\s+/g, '-');
+    if (!id) return;
+    try {
+      const res = await fetch(`https://api.coingecko.com/api/v3/coins/${id}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`);
+      if (!res.ok) throw new Error('Not found');
+      tokenData = await res.json();
+      const md = tokenData.market_data;
+      document.getElementById('tokenLogo').src = tokenData.image?.large || '';
+      document.getElementById('tokenName').textContent = tokenData.name;
+      document.getElementById('tokenSym').textContent = tokenData.symbol?.toUpperCase();
+      const price = md.current_price.usd;
+      document.getElementById('tokenPrice').textContent = price >= 1 ? `$${price.toLocaleString('en',{maximumFractionDigits:2})}` : `$${price.toFixed(6)}`;
+      const chg = md.price_change_percentage_24h || 0;
+      document.getElementById('priceChangeBadge').textContent = `${chg > 0 ? '+' : ''}${chg.toFixed(2)}%`;
+      document.getElementById('priceChangeBadge').className = `price-change ${chg >= 0 ? 'price-up' : 'price-down'}`;
+      document.getElementById('sMcap').textContent = formatUSD(md.market_cap.usd || 0);
+      document.getElementById('sVol').textContent = formatUSD(md.total_volume.usd || 0);
+      document.getElementById('sRank').textContent = tokenData.market_cap_rank || '-';
+      document.getElementById('tokenCard').style.display = 'block';
+      // Auto fill
+      document.getElementById('priceChange').value = chg.toFixed(1);
+      document.getElementById('mcapRank').value = tokenData.market_cap_rank || 10;
+    } catch(e) {
+      showError(`❌ Không tìm thấy token "${id}"`);
+    }
+  }
+
+  async function runAnalysis() {
+    const txAmount    = parseFloat(document.getElementById('txAmount').value) || 5000000;
+    const txCount     = parseFloat(document.getElementById('txCount').value) || 12;
+    const buySell     = parseFloat(document.getElementById('buySell').value) || 2.5;
+    const inflow      = parseFloat(document.getElementById('inflow').value) || 1000000;
+    const outflow     = parseFloat(document.getElementById('outflow').value) || 3000000;
+    const walletAge   = parseFloat(document.getElementById('walletAge').value) || 365;
+    const priceChg    = parseFloat(document.getElementById('priceChange').value) || 0;
+    const mcapRank    = parseFloat(document.getElementById('mcapRank').value) || 10;
+    const concentration = parseFloat(document.getElementById('concentration').value) || 35;
+    const socialVol   = 50000;
+
+    document.getElementById('errorMsg').style.display = 'none';
+    document.getElementById('resultSection').style.display = 'none';
+    document.getElementById('loading').style.display = 'block';
+    document.querySelector('.btn-analyze').disabled = true;
+
+    const input = [[
+      txAmount, txCount, buySell,
+      inflow, outflow, walletAge,
+      priceChg, mcapRank, concentration, socialVol
+    ]];
+
+    let signalIdx = 1, impactIdx = 1, alertIdx = 0, flowIdx = 1;
+
+    try {
+      const res = await fetch("https://api.opengradient.ai/api/v1/model/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model_cid: MODEL_CID, inputs: { float_input: input } })
+      });
+      const data = await res.json();
+      const labels = data?.output_label ?? [];
+      signalIdx = parseInt(labels[0] ?? calcSignal(buySell, inflow, outflow));
+      impactIdx = parseInt(labels[1] ?? calcImpact(txAmount, txCount, mcapRank));
+      alertIdx  = parseInt(labels[2] ?? calcAlert(txAmount, txCount, buySell, inflow));
+      flowIdx   = parseInt(labels[3] ?? calcFlow(inflow, outflow));
+    } catch {
+      signalIdx = calcSignal(buySell, inflow, outflow);
+      impactIdx = calcImpact(txAmount, txCount, mcapRank);
+      alertIdx  = calcAlert(txAmount, txCount, buySell, inflow);
+      flowIdx   = calcFlow(inflow, outflow);
+    } finally {
+      document.getElementById('loading').style.display = 'none';
+      document.querySelector('.btn-analyze').disabled = false;
+    }
+
+    showResult({ signalIdx, impactIdx, alertIdx, flowIdx, txAmount, txCount, buySell, inflow, outflow, walletAge, priceChg, mcapRank, concentration });
+  }
+
+  function calcSignal(bs, inf, out) {
+    let s = 0;
+    if (bs > 2.5) s += 3; else if (bs > 1.5) s += 2; else if (bs > 1) s += 1;
+    else if (bs < 0.5) s -= 3; else if (bs < 0.8) s -= 2;
+    const fd = out - inf;
+    if (fd > 2000000) s += 2; else if (fd > 0) s += 1;
+    else if (fd < -2000000) s -= 2; else if (fd < 0) s -= 1;
+    return s >= 4 ? 2 : s <= -3 ? 0 : 1;
+  }
+  function calcImpact(amt, cnt, rank) {
+    let s = 0;
+    if (amt > 20000000) s += 3; else if (amt > 5000000) s += 2; else if (amt > 1000000) s += 1;
+    if (cnt > 20) s += 2; else if (cnt > 10) s += 1;
+    if (rank > 200) s += 2; else if (rank > 100) s += 1;
+    return s >= 6 ? 2 : s >= 3 ? 1 : 0;
+  }
+  function calcAlert(amt, cnt, bs, inf) {
+    let s = 0;
+    if (amt > 20000000) s += 3; else if (amt > 5000000) s += 2; else if (amt > 1000000) s += 1;
+    if (cnt > 25) s += 2; else if (cnt > 12) s += 1;
+    if (bs > 3.5 || bs < 0.4) s += 2;
+    if (inf > 10000000) s += 2; else if (inf > 3000000) s += 1;
+    return s >= 6 ? 2 : s >= 3 ? 1 : 0;
+  }
+  function calcFlow(inf, out) {
+    const net = inf - out;
+    const total = inf + out + 1;
+    const ratio = net / total;
+    return ratio > 0.3 ? 2 : ratio < -0.3 ? 0 : 1;
+  }
+
+  function showResult(d) {
+    const signals = [
+      { icon:'📉', val:'BEARISH', sub:'Whale đang bán', color:'#ff4444' },
+      { icon:'➡️', val:'NEUTRAL', sub:'Không rõ xu hướng', color:'#aaa' },
+      { icon:'📈', val:'BULLISH', sub:'Whale đang tích lũy', color:'#00e676' },
+    ];
+    const impacts = [
+      { icon:'💤', val:'THẤP', sub:'Ít ảnh hưởng giá', color:'#555' },
+      { icon:'⚡', val:'VỪA', sub:'Có thể ảnh hưởng', color:'#f7b731' },
+      { icon:'💥', val:'CAO', sub:'Ảnh hưởng mạnh', color:'#ff4444' },
+    ];
+    const alerts = [
+      { icon:'✅', val:'BÌNH THƯỜNG', sub:'Không có gì bất thường', color:'#00e676' },
+      { icon:'👀', val:'CHÚ Ý', sub:'Nên theo dõi thêm', color:'#f7b731' },
+      { icon:'🚨', val:'CẢNH BÁO', sub:'Whale di chuyển lớn!', color:'#ff4444' },
+    ];
+    const flows = [
+      { icon:'💚', val:'OUTFLOW', sub:'Whale rút khỏi sàn', color:'#00e676' },
+      { icon:'⚖️', val:'NEUTRAL', sub:'Cân bằng dòng tiền', color:'#aaa' },
+      { icon:'🔴', val:'INFLOW', sub:'Whale nạp vào sàn', color:'#ff4444' },
+    ];
+
+    const s = signals[d.signalIdx] || signals[1];
+    const im = impacts[d.impactIdx] || impacts[1];
+    const al = alerts[d.alertIdx] || alerts[0];
+    const fl = flows[d.flowIdx] || flows[1];
+
+    // Alert Banner
+    const alertTexts = [
+      '✅ Không có hoạt động bất thường từ whale',
+      '👀 Phát hiện hoạt động whale đáng chú ý — Theo dõi thêm!',
+      '🚨 CẢNH BÁO! Whale đang di chuyển số lượng lớn — Hành động ngay!'
+    ];
+    document.getElementById('alertBanner').textContent = alertTexts[d.alertIdx];
+    document.getElementById('alertBanner').className = `alert-banner alert-${d.alertIdx}`;
+
+    // Hero boxes
+    const setHero = (prefix, cfg) => {
+      document.getElementById(`${prefix}Icon`).textContent = cfg.icon;
+      document.getElementById(`${prefix}Val`).textContent = cfg.val;
+      document.getElementById(`${prefix}Val`).style.color = cfg.color;
+      document.getElementById(`${prefix}Sub`).textContent = cfg.sub;
+      document.getElementById(`${prefix}Box`).style.borderColor = cfg.color;
+    };
+    setHero('signal', s);
+    setHero('impact', im);
+    setHero('flow', fl);
+    document.getElementById('alertIcon2').textContent = al.icon;
+    document.getElementById('alertVal').textContent = al.val;
+    document.getElementById('alertVal').style.color = al.color;
+    document.getElementById('alertSub').textContent = al.sub;
+    document.getElementById('alertBox2').style.borderColor = al.color;
+
+    // Metrics
+    const metrics = [
+      { icon:'💰', name:'Giá trị giao dịch whale', detail:'Tổng USD trong 24h', value: formatUSD(d.txAmount) },
+      { icon:'📊', name:'Số giao dịch whale', detail:'Trong 24 giờ qua', value: `${d.txCount} giao dịch` },
+      { icon:'⚖️', name:'Tỷ lệ mua/bán', detail: d.buySell > 1 ? 'Whale đang mua nhiều hơn bán' : 'Whale đang bán nhiều hơn mua', value: `${d.buySell.toFixed(2)}x` },
+      { icon:'📅', name:'Tuổi ví whale chính', detail: d.walletAge > 365 ? 'Ví lâu đời, có kinh nghiệm' : 'Ví tương đối mới', value: `${Math.round(d.walletAge)} ngày` },
+      { icon:'📉', name:'Biến động giá 24h', detail: 'Tương quan với hành động whale', value: `${d.priceChg > 0 ? '+' : ''}${d.priceChg.toFixed(1)}%` },
+      { icon:'🐋', name:'Nồng độ top 10 ví', detail: d.concentration > 50 ? 'Tập trung cao — rủi ro whale dump' : 'Phân bổ tương đối đều', value: `${d.concentration.toFixed(1)}%` },
+    ];
+    document.getElementById('metricsDetail').innerHTML = metrics.map(m => `
+      <div class="metric-row">
+        <div class="metric-icon">${m.icon}</div>
+        <div class="metric-info">
+          <div class="metric-name">${m.name}</div>
+          <div class="metric-detail">${m.detail}</div>
+        </div>
+        <div class="metric-value">${m.value}</div>
+      </div>`).join('');
+
+    // Flow bar
+    const total = d.inflow + d.outflow + 1;
+    const outPct = Math.round(d.outflow / total * 100);
+    const inPct  = Math.round(d.inflow / total * 100);
+    document.getElementById('flowBar').innerHTML = `
+      <div class="flow-outflow" style="width:${Math.min(outPct,50)}%"></div>
+      <div class="flow-inflow"  style="width:${Math.min(inPct,50)}%"></div>`;
+    document.getElementById('flowOutLabel').textContent = `Outflow: ${formatUSD(d.outflow)}`;
+    document.getElementById('flowInLabel').textContent  = `Inflow: ${formatUSD(d.inflow)}`;
+
+    // Whale list (simulated)
+    const whales = [
+      { rank:1, addr:'0x3f5CE5FBFe3E9af3971dD833D26bA9b5C936f0bE', pct: (d.concentration * 0.3).toFixed(1), change:'+2.1%', trend:'up' },
+      { rank:2, addr:'0x742d35Cc6634C0532925a3b844Bc454e4438f44e', pct: (d.concentration * 0.22).toFixed(1), change:'-1.5%', trend:'down' },
+      { rank:3, addr:'0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8', pct: (d.concentration * 0.18).toFixed(1), change:'+0.8%', trend:'up' },
+      { rank:4, addr:'0x8103683202aa8DA10536036EDef04CDd865C225E', pct: (d.concentration * 0.15).toFixed(1), change:'0.0%', trend:'neutral' },
+      { rank:5, addr:'0xDCEceAF3fc5C0a63d195d69b1A90011B7B19650D', pct: (d.concentration * 0.15).toFixed(1), change:'+1.2%', trend:'up' },
+    ];
+    document.getElementById('whaleList').innerHTML = whales.map(w => `
+      <div class="whale-item">
+        <div class="whale-rank">#${w.rank}</div>
+        <div class="whale-addr">${w.addr.slice(0,6)}...${w.addr.slice(-4)}</div>
+        <div class="whale-pct">${w.pct}%</div>
+        <div class="whale-change" style="color:${w.trend==='up'?'#00e676':w.trend==='down'?'#ff4444':'#555'}">${w.change}</div>
+      </div>`).join('');
+
+    // Recent transactions (simulated)
+    const txTypes = d.buySell > 1.5 ? ['buy','buy','buy','sell','buy'] : d.buySell < 0.8 ? ['sell','sell','buy','sell','sell'] : ['buy','sell','buy','sell','buy'];
+    const txAmounts = [d.txAmount * 0.3, d.txAmount * 0.2, d.txAmount * 0.15, d.txAmount * 0.25, d.txAmount * 0.1];
+    const txTimes = ['2 phút trước', '8 phút trước', '15 phút trước', '31 phút trước', '47 phút trước'];
+    document.getElementById('recentTxs').innerHTML = txAmounts.map((amt, i) => `
+      <div class="tx-item">
+        <div class="tx-left">
+          <div class="tx-dot ${txTypes[i]==='buy'?'tx-buy':'tx-sell'}"></div>
+          <div>
+            <div class="tx-addr">0x${Math.random().toString(16).slice(2,8)}...${Math.random().toString(16).slice(2,6)}</div>
+            <div class="tx-time">${txTimes[i]} · ${selectedChain}</div>
+          </div>
+        </div>
+        <div class="tx-amount" style="color:${txTypes[i]==='buy'?'#00e676':'#ff4444'}">${txTypes[i]==='buy'?'MUA':'BÁN'} ${formatUSD(amt)}</div>
+      </div>`).join('');
+
+    // Analysis
+    const analyses = [];
+    if (d.signalIdx === 2) analyses.push({ icon:'📈', text:`Tín hiệu BULLISH — Whale đang tích lũy với tỷ lệ mua/bán <strong>${d.buySell.toFixed(2)}x</strong>. Kết hợp với outflow từ exchange cao (<strong>${formatUSD(d.outflow)}</strong>), đây là dấu hiệu whale không có ý định bán ngay.` });
+    else if (d.signalIdx === 0) analyses.push({ icon:'📉', text:`Tín hiệu BEARISH — Whale đang bán với tỷ lệ <strong>${d.buySell.toFixed(2)}x</strong>. Exchange inflow <strong>${formatUSD(d.inflow)}</strong> cao hơn outflow, whale đang nạp token vào sàn để chuẩn bị bán.` });
+    else analyses.push({ icon:'➡️', text:`Tín hiệu NEUTRAL — Hoạt động whale không rõ xu hướng. Theo dõi thêm biến động giá và volume trong 4-8 giờ tới để có tín hiệu rõ hơn.` });
+
+    if (d.impactIdx === 2) analyses.push({ icon:'💥', text:`Impact giá CAO — Giao dịch <strong>${formatUSD(d.txAmount)}</strong> với <strong>${d.txCount}</strong> giao dịch trong 24h có thể tạo biến động giá đáng kể, đặc biệt với token hạng #${d.mcapRank}.` });
+    else if (d.impactIdx === 1) analyses.push({ icon:'⚡', text:`Impact giá VỪA — Hoạt động whale ở mức trung bình, có thể tạo dao động 2-5% trong 24-48h tới nếu xu hướng tiếp tục.` });
+
+    if (d.concentration > 60) analyses.push({ icon:'⚠️', text:`Top 10 ví nắm giữ <strong>${d.concentration.toFixed(1)}%</strong> tổng supply — Rủi ro cao! Chỉ cần 1-2 whale quyết định bán có thể tạo áp lực giảm mạnh.` });
+    else analyses.push({ icon:'✅', text:`Phân bổ token khá đều với top 10 ví nắm <strong>${d.concentration.toFixed(1)}%</strong> — Rủi ro tập trung ở mức chấp nhận được.` });
+
+    if (d.walletAge < 90) analyses.push({ icon:'🆕', text:`Ví whale chính còn mới (<strong>${Math.round(d.walletAge)} ngày</strong>) — Cần thận trọng, có thể là smart money mới tham gia hoặc ví mới tạo để phân tán.` });
+
+    const recommendation = d.signalIdx === 2 && d.alertIdx <= 1
+      ? '💡 Khuyến nghị: Tín hiệu tích cực. Whale đang tích lũy — có thể là cơ hội nhưng hãy quản lý rủi ro cẩn thận.'
+      : d.signalIdx === 0
+      ? '💡 Khuyến nghị: Tín hiệu tiêu cực. Whale đang bán — cẩn thận với vị thế Long, xem xét chốt lời hoặc cắt lỗ nếu cần.'
+      : '💡 Khuyến nghị: Thị trường không rõ xu hướng. Chờ thêm tín hiệu trước khi hành động.';
+
+    analyses.push({ icon:'💡', text: recommendation });
+
+    document.getElementById('analysisList').innerHTML = analyses.map(a =>
+      `<div class="reason-item"><span style="font-size:18px;min-width:26px">${a.icon}</span><span>${a.text}</span></div>`
+    ).join('');
+
+    document.getElementById('resultSection').style.display = 'block';
+    document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('errorMsg');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  document.getElementById('tokenId').addEventListener('keypress', e => {
+    if (e.key === 'Enter') fetchTokenData();
+  });
+</script>
+</body>
+</html>
